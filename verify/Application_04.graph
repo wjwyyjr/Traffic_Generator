@@ -1,0 +1,110 @@
+/********************************************************
+*
+* File Name:      	..\verify\Application_04.graph
+* Tool:           	Task Graph Traffic Pattern Generator
+* Creation Time:  	2020-06-15 23:39
+* Number verif_f Tasks:	52
+* Number verif_f Edges:	52
+*
+********************************************************/
+PE_7
+|
+PE_6
+|
+PE_7
+|
+DDR
+|
+PE_7
+|
+PE_0
+|
+PE_1
+|
+DDR
+|
+PE_1
+|
+DDR
+|
+PE_1
+|
+PE_0
+| \
+|  DDR
+| /
+Core
+|
+DDR
+|
+|  DDR
+| /
+Core
+| \
+|  PE_13
+| /
+DDR
+|
+PE_13
+|
+Core
+|
+DDR
+|
+Core
+|
+PE_0
+|
+PE_1
+|
+DDR
+|
+PE_1
+|
+DDR
+|
+PE_1
+|
+PE_8
+|
+PE_7
+|
+DDR
+|
+PE_7
+|
+PE_6
+|
+PE_7
+|
+PE_6
+|
+PE_7
+|
+DDR
+|
+PE_7
+|
+PE_0
+|
+PE_1
+|
+DDR
+|
+PE_1
+|
+DDR
+|
+PE_1
+|
+PE_8
+|
+PE_7
+|
+DDR
+|
+PE_7
+|
+PE_6
+|
+PE_7
