@@ -14,7 +14,7 @@ if_check = args.check_output_file
 ######################################## Global Configuration ########################################
 #### generate execution times (for round robin the pe resource) ####
 total_iterations = 10
-single_task_iterations = 20     # mostly for the DDR write and ack if .info file the third part is 2
+single_task_iterations = 50     # mostly for the DDR write and ack if .info file the third part is 2
 
 #### for homogeneous cores ####
 ## Core 0 1 2 3 ## DDR 0 1 ## PE 1 2 3 4 (represented by PE-1) ##
@@ -234,12 +234,26 @@ for iters in range(total_iterations):
 
                 task_id += 1
             
-            #### Due to DDR Push, We need extra task for DDR receives the ack signal
+            #### Due to DDR Push, We need extra task for DDR receives the ack signal, the task without out edge
             mapped_proc_id.append(Processor[pe_id_2][0])
             Task_schedule[pe_id_2] += 1
             schedule.append(Task_schedule[pe_id_2])
             task_mu.append(Processor[pe_id_2][1])
             task_sigma.append(Processor[pe_id_2][2])
+
+            #### Note here! the core task need to connect to the task next to ddr task
+            if model[i+3].strip("\n").split(" ")[0] == "Core":
+                ### Edge
+                src_task_id.append(task_id - 1)
+                dst_task_id.append(task_id + 1)
+                src_proc_id.append(Processor[pe_id_1][0])   # core -> core
+                dst_proc_id.append(Processor[pe_id_1][0])
+                edge_mu.append(Current_Msg_Size[msg_type_1])
+                msg_type_list.append(msg_type_1)
+                edge_id += 1
+            else:
+                print("Phase Error !")
+                sys.exit(0)
 
             task_id += 1
 
@@ -488,7 +502,7 @@ with open(outputFileName, "w") as of:
     # write edge
     for i in range(edge_id):
         of.writelines(str(i)+"\t"+str(src_task_id[i])+"\t"+str(dst_task_id[i])+"\t"+src_proc_id[i]+"\t"+dst_proc_id[i]\
-            +"\t"+"0\t2\t0\t2\t"+edge_mu[i]+"\t0"+"\t0.1"+"\n")
+            +"\t"+"0\t100\t0\t100\t"+edge_mu[i]+"\t0"+"\t0.1"+"\n")
 
 #################################### Output Task Graph Verfication File ####################################
 if if_check:
