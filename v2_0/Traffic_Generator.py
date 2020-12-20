@@ -14,7 +14,11 @@ if_check = args.check_output_file
 ######################################## Global Configuration ########################################
 #### generate execution times (for round robin the pe resource) ####
 total_iterations = 10
-single_task_iterations = 50     # mostly for the DDR write and ack if .info file the third part is 2
+single_task_iterations = 20     # mostly for the DDR write and ack if .info file the third part is 2
+DDR_TYPE = 'DDR3'
+# When simulation, we would consider the first task as the system source.
+# Here we specify the first task out mem size, and other is -1 which means no limitation !
+first_task_out_mem_size = 1   
 
 #### for homogeneous cores ####
 ## Core 0 1 2 3 ## DDR 0 1 ## PE 1 2 3 4 (represented by PE-1) ##
@@ -83,6 +87,18 @@ for i in range(MsgType_num):
 ## add the percentage
 ######################################
 
+######### DDR Access Model ###########
+## the simplified model of DDR
+def compute_ddr_access_clk(msg_size, ddr_type="DDR3"):
+    """The unit of msg size is bit, default DDR type is DDR3 and clock is 1ns"""
+    clk = 1e9
+    DDR_access_rate = {'DDR':2e9, 'DDR2':4e9, 'DDR3':8e9, 'DDR4':16e9} # unit Byte/s
+    assert(ddr_type in DDR_access_rate)
+    access_time = msg_size / (8*DDR_access_rate[ddr_type])
+    
+    return str(int(access_time*clk))
+######################################
+
 ############################################################################################################
 #################################### Read Application ####################################
 model = []
@@ -102,6 +118,7 @@ src_proc_id = []
 dst_proc_id = []
 edge_mu = []
 msg_type_list = []
+out_mem_size = []
 
 task_id = 0
 edge_id = 0
@@ -167,6 +184,14 @@ for iters in range(total_iterations):
                 sys.exit(0)
             edge_mu.append(Current_Msg_Size[msg_type])
             msg_type_list.append(msg_type)
+
+            # config the out mem size, if the first edge in the *.info file, it would be set to specified value,
+            # else set to -1;
+            if i == Model_offset:
+                out_mem_size.append(first_task_out_mem_size)
+            else:
+                out_mem_size.append(-1)
+
             edge_id += 1
             # HQM to DDR
             src_task_id.append(task_id)
@@ -179,6 +204,11 @@ for iters in range(total_iterations):
                 sys.exit(0)
             edge_mu.append(Current_Msg_Size[msg_type])
             msg_type_list.append(msg_type)
+
+            # config the out mem size, if the first edge in the *.info file, it would be set to specified value,
+            # else set to -1;
+            out_mem_size.append(-1)
+
             edge_id += 1
 
             task_id += 1
@@ -195,7 +225,8 @@ for iters in range(total_iterations):
                 mapped_proc_id.append(Processor[pe_id_2][0])
                 Task_schedule[pe_id_2] += 1
                 schedule.append(Task_schedule[pe_id_2])
-                task_mu.append(Processor[pe_id_2][1])
+                # task_mu.append(Processor[pe_id_2][1])
+                task_mu.append(compute_ddr_access_clk(int(Current_Msg_Size[msg_type_2]), DDR_TYPE))
                 task_sigma.append(Processor[pe_id_2][2])
 
                 ### Edge
@@ -208,6 +239,8 @@ for iters in range(total_iterations):
                     sys.exit(0)
                 edge_mu.append(Current_Msg_Size[msg_type_2])
                 msg_type_list.append(msg_type_2)
+                out_mem_size.append(-1)
+
                 edge_id += 1
 
                 task_id += 1
@@ -230,6 +263,7 @@ for iters in range(total_iterations):
                     sys.exit(0)
                 edge_mu.append(Current_Msg_Size[msg_type_1])
                 msg_type_list.append(msg_type_1)
+                out_mem_size.append(-1)
                 edge_id += 1
 
                 task_id += 1
@@ -238,7 +272,8 @@ for iters in range(total_iterations):
             mapped_proc_id.append(Processor[pe_id_2][0])
             Task_schedule[pe_id_2] += 1
             schedule.append(Task_schedule[pe_id_2])
-            task_mu.append(Processor[pe_id_2][1])
+            # task_mu.append(Processor[pe_id_2][1])
+            task_mu.append(compute_ddr_access_clk(int(Current_Msg_Size[msg_type_1]), DDR_TYPE))
             task_sigma.append(Processor[pe_id_2][2])
 
             #### Note here! the core task need to connect to the task next to ddr task
@@ -250,6 +285,7 @@ for iters in range(total_iterations):
                 dst_proc_id.append(Processor[pe_id_1][0])
                 edge_mu.append(Current_Msg_Size[msg_type_1])
                 msg_type_list.append(msg_type_1)
+                out_mem_size.append(-1)
                 edge_id += 1
             else:
                 print("Phase Error !")
@@ -293,6 +329,12 @@ for iters in range(total_iterations):
                 sys.exit(1)
             edge_mu.append(Current_Msg_Size[msg_type])
             msg_type_list.append(msg_type)
+
+            if i == Model_offset:
+                out_mem_size.append(first_task_out_mem_size)
+            else:
+                out_mem_size.append(-1)
+
             edge_id += 1        
             # Core to DDR
             src_task_id.append(task_id)
@@ -304,7 +346,8 @@ for iters in range(total_iterations):
                 sys.exit(1)
             edge_mu.append(Current_Msg_Size[msg_type])
             msg_type_list.append(msg_type)
-            edge_id += 1     
+            out_mem_size.append(-1)
+            edge_id += 1
 
             task_id += 1
 
@@ -333,6 +376,7 @@ for iters in range(total_iterations):
                     sys.exit(1)
                 edge_mu.append(Current_Msg_Size[msg_type_1])
                 msg_type_list.append(msg_type_1)
+                out_mem_size.append(-1)
                 edge_id += 1
 
                 task_id += 1
@@ -342,7 +386,8 @@ for iters in range(total_iterations):
                 mapped_proc_id.append(Processor[pe_id_2][0])
                 Task_schedule[pe_id_2] += 1
                 schedule.append(Task_schedule[pe_id_2])
-                task_mu.append(Processor[pe_id_2][1])
+                #task_mu.append(Processor[pe_id_2][1])
+                task_mu.append(compute_ddr_access_clk(int(Current_Msg_Size[msg_type_2]), DDR_TYPE))
                 task_sigma.append(Processor[pe_id_2][2])
 
                 ### Edge
@@ -355,6 +400,7 @@ for iters in range(total_iterations):
                     sys.exit(1)
                 edge_mu.append(Current_Msg_Size[msg_type_2])
                 msg_type_list.append(msg_type_2)
+                out_mem_size.append(-1)
                 edge_id += 1            
                 
                 task_id += 1
@@ -381,6 +427,7 @@ for iters in range(total_iterations):
             msg_type_1 = int(task_info_1[1])
             exec_iters_1 = int(task_info_1[2])
             #### Iterations larger than 1
+            first_iter_flag = 1
             if exec_iters == 2:
 
                 if exec_iters != exec_iters_1:
@@ -396,8 +443,14 @@ for iters in range(total_iterations):
                     mapped_proc_id.append(Processor[pe_id][0])
                     Task_schedule[pe_id] += 1
                     schedule.append(Task_schedule[pe_id])
-                    task_mu.append(Processor[pe_id][1])
+
+                    if pe_id.find("DDR") != -1:
+                        task_mu.append(compute_ddr_access_clk(int(Current_Msg_Size[msg_type]), DDR_TYPE))
+                    else:
+                        task_mu.append(Processor[pe_id][1])
+
                     task_sigma.append(Processor[pe_id][2])
+
 
                     #### Edge
                     src_task_id.append(task_id)
@@ -409,6 +462,13 @@ for iters in range(total_iterations):
                         sys.exit(0)
                     edge_mu.append(Current_Msg_Size[msg_type])
                     msg_type_list.append(msg_type)
+
+                    if i == Model_offset and first_iter_flag == 1:
+                        out_mem_size.append(first_task_out_mem_size)
+                        first_iter_flag = 0
+                    else:
+                        out_mem_size.append(-1)
+
                     edge_id += 1
 
                     task_id += 1
@@ -418,7 +478,10 @@ for iters in range(total_iterations):
                     mapped_proc_id.append(Processor[pe_id_1][0])
                     Task_schedule[pe_id_1] += 1
                     schedule.append(Task_schedule[pe_id_1])
-                    task_mu.append(Processor[pe_id_1][1])
+                    if pe_id_1.find("DDR") != -1:
+                        task_mu.append(compute_ddr_access_clk(int(Current_Msg_Size[msg_type_1]), DDR_TYPE))
+                    else:
+                        task_mu.append(Processor[pe_id_1][1])
                     task_sigma.append(Processor[pe_id_1][2])
 
                     ### Edge            
@@ -431,6 +494,7 @@ for iters in range(total_iterations):
                         sys.exit(0)
                     edge_mu.append(Current_Msg_Size[msg_type_1])
                     msg_type_list.append(msg_type_1)
+                    out_mem_size.append(-1)
                     edge_id += 1
 
                     task_id += 1
@@ -443,7 +507,10 @@ for iters in range(total_iterations):
                 mapped_proc_id.append(Processor[pe_id][0])
                 Task_schedule[pe_id] += 1
                 schedule.append(Task_schedule[pe_id])
-                task_mu.append(Processor[pe_id][1])
+                if pe_id.find("DDR") != -1:
+                    task_mu.append(compute_ddr_access_clk(int(Current_Msg_Size[msg_type]), DDR_TYPE))
+                else:
+                    task_mu.append(Processor[pe_id][1])
                 task_sigma.append(Processor[pe_id][2])
 
                 #### Edge
@@ -456,6 +523,12 @@ for iters in range(total_iterations):
                     sys.exit(0)
                 edge_mu.append(Current_Msg_Size[msg_type])
                 msg_type_list.append(msg_type)
+
+                if i == Model_offset:
+                    out_mem_size.append(first_task_out_mem_size)
+                else:
+                    out_mem_size.append(-1)
+
                 edge_id += 1
 
                 task_id += 1
@@ -465,7 +538,10 @@ for iters in range(total_iterations):
                     mapped_proc_id.append(Processor[pe_id_1][0])
                     Task_schedule[pe_id_1] += 1
                     schedule.append(Task_schedule[pe_id_1])
-                    task_mu.append(Processor[pe_id_1][1])
+                    if pe_id_1.find("DDR") != -1:
+                        task_mu.append(compute_ddr_access_clk(int(Current_Msg_Size[msg_type_1]), DDR_TYPE))
+                    else:
+                        task_mu.append(Processor[pe_id_1][1])
                     task_sigma.append(Processor[pe_id_1][2])
 
                     task_id += 1
@@ -502,7 +578,7 @@ with open(outputFileName, "w") as of:
     # write edge
     for i in range(edge_id):
         of.writelines(str(i)+"\t"+str(src_task_id[i])+"\t"+str(dst_task_id[i])+"\t"+src_proc_id[i]+"\t"+dst_proc_id[i]\
-            +"\t"+"0\t100\t0\t100\t"+edge_mu[i]+"\t0"+"\t0.1"+"\n")
+            +"\t"+"0\t"+str(out_mem_size[i])+"\t0\t1000\t"+edge_mu[i]+"\t0"+"\t0.1"+"\n")
 
 #################################### Output Task Graph Verfication File ####################################
 if if_check:
