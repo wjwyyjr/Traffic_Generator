@@ -552,6 +552,46 @@ for iters in range(total_iterations):
 
                 i += 1
 
+## change schedule for round_robin in simulator
+# reschedule 
+if True:
+    task_core = {}
+    num_task_single_iter = int(task_id / total_iterations)
+    ordered_task_core = []
+    ordered_task_id = []
+    # combine task id and core id
+    for i in range(task_id):
+        task_core[i] = int(mapped_proc_id[i])
+    # reorder the task id and core id with total iterations
+    # store the task id and core id after reordering
+    for i in range(num_task_single_iter):
+        for j in range(total_iterations):
+            ordered_task_core.append(task_core[i+num_task_single_iter*j])
+            ordered_task_id.append(i+num_task_single_iter*j)
+    
+    # intialize task schedule in all core to -1
+    core_schedule = {}
+    ordered_schedule = []
+    for i in range(Processor_num):
+        core_schedule[i] = -1
+    # by traverse the core id after ordering to accumulate the schedule id
+    for i in ordered_task_core:
+        core_schedule[i] += 1
+        ordered_schedule.append(core_schedule[i])
+
+    assert(len(ordered_schedule) == len(ordered_task_id))
+    # combine the ordered task id and schedule id
+    task_schedule = {}
+    for i in range(len(ordered_task_id)):
+        task_schedule[ordered_task_id[i]] = ordered_schedule[i]
+    # if use this function, then clear original schedule list
+    schedule.clear()
+    for i in range(task_id):
+        schedule.append(task_schedule[i])
+
+    for i in ordered_task_id:
+        print(i,"\t",task_core[i],"\t",task_schedule[i])
+
 ############################################################################################################
 #################################### Output Task Graph Description File ####################################
 outputFileName = application_model_file.replace(".info", ".stp").replace("model/", "traffic/")
